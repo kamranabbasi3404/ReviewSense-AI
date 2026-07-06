@@ -1,0 +1,44 @@
+# ReviewSense AI Root .gitignore
+
+# Environment variables
+backend/.env
+.env
+.env*.local
+
+# SQLite Database
+backend/*.db
+backend/*.db-journal
+
+# Temporary uploads folder
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Python cache & distribution files
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+backend/.pytest_cache/
+backend/dist/
+backend/build/
+backend/*.egg-info/
+
+# Frontend dependencies and build output
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/tsconfig.tsbuildinfo
+frontend/next-env.d.ts
+
+# Editor & System Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Large Model Files
+bert_sentiment_model/
+bert_sentiment_model.zip
+*.zip
+*.tar.gz
+
