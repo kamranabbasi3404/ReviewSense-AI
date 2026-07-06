@@ -43,6 +43,42 @@ interface ChatMessage {
   content: string;
 }
 
+function formatMarkdown(text: string) {
+  if (!text) return "";
+  
+  const lines = text.split("\n");
+  
+  return lines.map((line, lineIdx) => {
+    const parts = line.split(/(\*\*.*?\*\*)/g);
+    
+    const renderedLine = parts.map((part, partIdx) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        const cleanText = part.slice(2, -2);
+        return <strong key={partIdx} className="font-extrabold text-slate-900 dark:text-white">{cleanText}</strong>;
+      }
+      
+      const subParts = part.split(/(`.*?`)/g);
+      return subParts.map((subPart, subPartIdx) => {
+        if (subPart.startsWith("`") && subPart.endsWith("`")) {
+          const cleanCode = subPart.slice(1, -1);
+          return (
+            <code key={subPartIdx} className="bg-slate-200 px-1.5 py-0.5 rounded text-xs font-mono dark:bg-slate-800 text-indigo-650 dark:text-indigo-400">
+              {cleanCode}
+            </code>
+          );
+        }
+        return subPart;
+      });
+    });
+
+    return (
+      <span key={lineIdx} className="block mt-0.5 first:mt-0">
+        {renderedLine}
+      </span>
+    );
+  });
+}
+
 export default function AnalysisPage() {
   const router = useRouter();
   const { id } = useParams();
@@ -557,9 +593,9 @@ export default function AnalysisPage() {
                     <Sparkles className="h-4.5 w-4.5 text-indigo-600 dark:text-indigo-400" />
                     Overall Executive Summary
                   </h3>
-                  <p className="text-sm text-slate-650 dark:text-slate-300 leading-relaxed">
-                    {insights.summary}
-                  </p>
+                  <div className="text-sm text-slate-655 dark:text-slate-300 leading-relaxed space-y-1">
+                    {formatMarkdown(insights.summary)}
+                  </div>
                 </div>
 
                 {/* Complaints */}
@@ -572,7 +608,7 @@ export default function AnalysisPage() {
                       {insights.top_complaints.map((item, idx) => (
                         <li key={idx} className="text-sm text-slate-655 dark:text-slate-300 flex items-start gap-2">
                           <span className="mt-1 flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-rose-500" />
-                          <span>{item}</span>
+                          <span>{formatMarkdown(item)}</span>
                         </li>
                       ))}
                       {insights.top_complaints.length === 0 && (
@@ -592,7 +628,7 @@ export default function AnalysisPage() {
                       {insights.appreciated_features.map((item, idx) => (
                         <li key={idx} className="text-sm text-slate-655 dark:text-slate-300 flex items-start gap-2">
                           <span className="mt-1 flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-emerald-500" />
-                          <span>{item}</span>
+                          <span>{formatMarkdown(item)}</span>
                         </li>
                       ))}
                       {insights.appreciated_features.length === 0 && (
@@ -612,7 +648,7 @@ export default function AnalysisPage() {
                       {insights.recommendations.map((item, idx) => (
                         <li key={idx} className="text-sm text-slate-655 dark:text-slate-300 flex items-start gap-2">
                           <span className="mt-1.5 flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-indigo-500" />
-                          <span>{item}</span>
+                          <span>{formatMarkdown(item)}</span>
                         </li>
                       ))}
                       {insights.recommendations.length === 0 && (
@@ -658,7 +694,7 @@ export default function AnalysisPage() {
                         : "bg-slate-100 text-slate-800 rounded-tl-none dark:bg-slate-800 dark:text-slate-200"
                     }`}
                   >
-                    {msg.content}
+                    {formatMarkdown(msg.content)}
                   </div>
                 </div>
               ))}
