@@ -54,15 +54,29 @@ class UserPasswordUpdate(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    two_fa_required: Optional[bool] = False
+    two_fa_token: Optional[str] = None
 
 class TokenData(BaseModel):
     email: Optional[str] = None
     user_id: Optional[int] = None
 
+class TwoFactorVerify(BaseModel):
+    code: str
+    two_fa_token: str
+
+class TwoFactorSetupOut(BaseModel):
+    secret: str
+    qr_code: str
+
+class TwoFactorCode(BaseModel):
+    code: str
+
 class UserOut(BaseModel):
     id: int
     name: str
     email: EmailStr
+    is_2fa_enabled: bool
     created_at: datetime
 
     class Config:

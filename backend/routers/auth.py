@@ -9,9 +9,13 @@ from sqlalchemy.orm import Session
 import jwt  # PyJWT
 import bcrypt
 
+import io
+import base64
+import pyotp
+import qrcode
 from database.database import get_db
 from models.db_models import User
-from models.schemas import UserSignup, UserLogin, Token, UserOut, TokenData, UserProfileUpdate, UserPasswordUpdate
+from models.schemas import UserSignup, UserLogin, Token, UserOut, TokenData, UserProfileUpdate, UserPasswordUpdate, TwoFactorVerify, TwoFactorSetupOut, TwoFactorCode
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -194,6 +198,22 @@ def login(credentials: UserLogin, response: Response, db: Session = Depends(get_
     
     register_successful_login(credentials.email)
     
+    # Check if 2FA is enabled
+    if user.is_2fa_enabled:
+        # Create a short-lived temporary 2FA token (valid for 5 minutes)
+        two_factor_expire = datetime.datetime.utcnow() + datetime.timedelta(minutes=5)
+        two_fa_token = jwt.encode(
+            {"sub": user.email, "user_id": user.id, "type": "2fa_temp", "exp": two_factor_expire},
+            SECRET_KEY,
+            algorithm=ALGORITHM
+        )
+        return {
+            "access_token": "",
+            "token_type": "bearer",
+            "two_fa_required": True,
+            "two_fa_token": two_fa_token
+        }
+    
     token_data = {"sub": user.email, "user_id": user.id}
     access_token = create_access_token(data=token_data)
     refresh_token = create_refresh_token(data=token_data)
@@ -220,7 +240,7 @@ def login(credentials: UserLogin, response: Response, db: Session = Depends(get_
         secure=COOKIE_SECURE
     )
     
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "two_fa_required": False, "two_fa_token": None}
 
 @router.post("/refresh", response_model=Token)
 def refresh_access_token(request: Request, response: Response, db: Session = Depends(get_db)):
@@ -346,3 +366,112 @@ def update_password(
     current_user.password_hash = get_password_hash(password_data.new_password)
     db.commit()
     return {"detail": "Password successfully updated."}
+
+@router.post("/login/2fa/verify", response_model=Token)
+def verify_2fa_login(verify_data: TwoFactorVerify, response: Response, db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+    )
+    try:
+        # Decode the temporary 2FA token
+        payload = jwt.decode(verify_data.two_fa_token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "2fa_temp":
+            raise credentials_exception
+        user_id: int = payload.get("user_id")
+        email: str = payload.get("sub")
+    except jwt.PyJWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired. Please log in again."
+        )
+        
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or not user.is_2fa_enabled or not user.totp_secret:
+        raise credentials_exception
+        
+    # Verify the code
+    totp = pyotp.TOTP(user.totp_secret)
+    if not totp.verify(verify_data.code):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid 2FA code"
+        )
+        
+    # Issue real tokens
+    token_data = {"sub": user.email, "user_id": user.id}
+    access_token = create_access_token(data=token_data)
+    refresh_token = create_refresh_token(data=token_data)
+    
+    # Set cookies
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        expires=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        samesite="lax",
+        secure=COOKIE_SECURE
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        expires=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        samesite="lax",
+        secure=COOKIE_SECURE
+    )
+    
+    return {"access_token": access_token, "token_type": "bearer", "two_fa_required": False, "two_fa_token": None}
+
+@router.post("/2fa/setup", response_model=TwoFactorSetupOut)
+def setup_2fa(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Generate random key
+    secret = pyotp.random_base32()
+    current_user.totp_secret = secret
+    db.commit()
+    
+    # Generate provisioning URI
+    totp = pyotp.TOTP(secret)
+    provisioning_uri = totp.provisioning_uri(name=current_user.email, issuer_name="ReviewSense AI")
+    
+    # Generate QR Code Base64
+    qr = qrcode.QRCode(version=1, box_size=5, border=3)
+    qr.add_data(provisioning_uri)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buffered = io.BytesIO()
+    img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    qr_code_url = f"data:image/png;base64,{img_str}"
+    
+    return {"secret": secret, "qr_code": qr_code_url}
+
+@router.post("/2fa/enable")
+def enable_2fa(verify_data: TwoFactorCode, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not current_user.totp_secret:
+        raise HTTPException(status_code=400, detail="2FA setup not initialized")
+        
+    totp = pyotp.TOTP(current_user.totp_secret)
+    if totp.verify(verify_data.code):
+        current_user.is_2fa_enabled = True
+        db.commit()
+        return {"detail": "Two-factor authentication successfully enabled."}
+    else:
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+
+@router.post("/2fa/disable")
+def disable_2fa(verify_data: TwoFactorCode, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not current_user.is_2fa_enabled or not current_user.totp_secret:
+        raise HTTPException(status_code=400, detail="2FA is not enabled")
+        
+    totp = pyotp.TOTP(current_user.totp_secret)
+    if totp.verify(verify_data.code):
+        current_user.is_2fa_enabled = False
+        current_user.totp_secret = None
+        db.commit()
+        return {"detail": "Two-factor authentication successfully disabled."}
+    else:
+        raise HTTPException(status_code=400, detail="Invalid verification code")

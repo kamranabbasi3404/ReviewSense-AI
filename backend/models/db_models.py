@@ -1,6 +1,6 @@
 import datetime
 from typing import Optional, List
-from sqlalchemy import Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from database.database import Base
 
@@ -11,6 +11,8 @@ class User(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
+    is_2fa_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    totp_secret: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     created_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
 
     projects: Mapped[List["Project"]] = relationship("Project", back_populates="owner", cascade="all, delete-orphan")

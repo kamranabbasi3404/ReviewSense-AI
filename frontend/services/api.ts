@@ -136,11 +136,32 @@ export const apiService = {
   },
 
   async login(email: string, password: string) {
-    // Login sets httpOnly cookies (access_token + refresh_token) on backend response.
-    // Token also stored in memory for cross-origin Authorization header.
-    const data = await request<{ access_token: string; token_type: string }>("/auth/login", {
+    const data = await request<{ 
+      access_token: string; 
+      token_type: string;
+      two_fa_required: boolean;
+      two_fa_token: string | null;
+    }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+    }, false);
+    
+    if (!data.two_fa_required) {
+      memoryToken = data.access_token;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("reviewsense_logged_in", "true");
+      }
+    }
+    return data;
+  },
+
+  async verify2faLogin(code: string, twoFaToken: string) {
+    const data = await request<{ 
+      access_token: string; 
+      token_type: string;
+    }>("/auth/login/2fa/verify", {
+      method: "POST",
+      body: JSON.stringify({ code, two_fa_token: twoFaToken }),
     }, false);
     
     memoryToken = data.access_token;
@@ -148,6 +169,26 @@ export const apiService = {
       localStorage.setItem("reviewsense_logged_in", "true");
     }
     return data;
+  },
+
+  async setup2fa() {
+    return request<{ secret: string; qr_code: string }>("/auth/2fa/setup", {
+      method: "POST",
+    });
+  },
+
+  async enable2fa(code: string) {
+    return request<{ detail: string }>("/auth/2fa/enable", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    });
+  },
+
+  async disable2fa(code: string) {
+    return request<{ detail: string }>("/auth/2fa/disable", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    });
   },
 
   async logout() {
