@@ -7,13 +7,18 @@ ReviewSense AI is a state-of-the-art, secure, and modern Product Review Sentimen
 ## ✨ Features
 
 ### 1. 🔒 Enterprise-Grade Security
+* **Two-Factor Authentication (2FA):** Dynamic TOTP algorithm setup. Scan generated QR codes with Google Authenticator, Microsoft Authenticator, or any compatible app. Requires temporary token validation before issuing secure cookies.
 * **httpOnly Session Cookies:** Session tokens (`access_token` & `refresh_token`) are stored in secure browser cookies, completely mitigating the risk of Cross-Site Scripting (XSS) token theft.
 * **Token Refresh Rotation:** Automatic token refresh workflow handles short-lived access tokens (30 mins) and long-lived refresh tokens (7 days) seamlessly.
 * **Brute-Force & Rate Limiting:** Brute force lockout (5 failed attempts locks account for 15 mins) and IP-based rate limiting on sensitive login/signup endpoints.
 * **Safe File Uploads:** Uploaded CSVs are validated by size, extension, and content type. Filenames are randomized with UUIDs to block Path Traversal attacks.
 * **Generic Error Messages:** Prevents account enumeration vulnerability by using uniform messages for incorrect authentication attempts.
 
-### 2. 🧠 Smart Review Analysis
+### 2. ⚙️ Account Settings & UX Polish
+* **Interactive Profile Panel:** Dynamic workspace under settings to change user name, email, and update passwords with client-side strength checks.
+* **Logout Validation Popup:** Premium custom confirmation modal with backdrop-blur styling to replace basic native browser alerts.
+
+### 3. 🧠 Smart Review Analysis
 * **Local BERT Model:** Sentiment classification runs locally on the backend using a fine-tuned BERT model, ensuring 100% data privacy and sub-second batch inference.
 * **Groq LLM Insights:** Automatically aggregates customer complaints, appreciated product features, and actionable business recommendations via Llama 3.1.
 * **Natural Language Chat:** Ask natural language questions like *"Why are customers complaining about the screen?"* and get insights compiled directly from matching reviews.
