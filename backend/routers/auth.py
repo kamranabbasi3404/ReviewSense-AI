@@ -25,6 +25,7 @@ if not SECRET_KEY:
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30   # Short-lived access token (was 60)
 REFRESH_TOKEN_EXPIRE_DAYS = 7      # Long-lived refresh token for session continuity
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "False").strip().lower() == "true"
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -205,7 +206,7 @@ def login(credentials: UserLogin, response: Response, db: Session = Depends(get_
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         expires=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax",
-        secure=False  # Set to True in production with HTTPS
+        secure=COOKIE_SECURE
     )
     
     # Set httpOnly cookie for refresh token (long-lived)
@@ -216,7 +217,7 @@ def login(credentials: UserLogin, response: Response, db: Session = Depends(get_
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         expires=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         samesite="lax",
-        secure=False  # Set to True in production with HTTPS
+        secure=COOKIE_SECURE
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
@@ -278,7 +279,7 @@ def refresh_access_token(request: Request, response: Response, db: Session = Dep
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         expires=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax",
-        secure=False  # Set to True in production with HTTPS
+        secure=COOKIE_SECURE
     )
     
     return {"access_token": new_access_token, "token_type": "bearer"}
