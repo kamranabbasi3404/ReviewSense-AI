@@ -17,6 +17,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const fetchUser = async () => {
     const isLoggedIn = typeof window !== "undefined" ? localStorage.getItem("reviewsense_logged_in") === "true" : false;
@@ -50,8 +51,13 @@ export default function Navbar() {
   }, [pathname]);
 
   const handleLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
     apiService.logout();
     setUser(null);
+    setShowLogoutModal(false);
     window.dispatchEvent(new Event("auth-state-change"));
     router.push("/");
   };
@@ -147,6 +153,49 @@ export default function Navbar() {
           )}
         </nav>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            onClick={() => setShowLogoutModal(false)}
+          />
+          
+          {/* Modal Content */}
+          <div className="relative w-full max-w-sm rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200 dark:border-slate-800/80 dark:bg-slate-900">
+            <div className="flex flex-col items-center text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400">
+                <LogOut className="h-6 w-6" />
+              </div>
+              <h3 className="mt-4 text-base font-bold text-slate-900 dark:text-white">
+                Confirm Log Out
+              </h3>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                Are you sure you want to log out of your ReviewSense AI account? Your active session will be ended.
+              </p>
+            </div>
+            
+            <div className="mt-6 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmLogout}
+                className="flex-1 rounded-xl bg-red-650 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-red-500 transition-all active:scale-95 cursor-pointer"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
