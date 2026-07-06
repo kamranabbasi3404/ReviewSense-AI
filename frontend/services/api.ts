@@ -173,6 +173,20 @@ export const apiService = {
     return request<{ id: number; name: string; email: string }>("/auth/me");
   },
 
+  async updateProfile(name: string, email: string) {
+    return request<{ id: number; name: string; email: string }>("/auth/profile", {
+      method: "PUT",
+      body: JSON.stringify({ name, email }),
+    });
+  },
+
+  async updatePassword(currentPassword: string, newPassword: string) {
+    return request<{ detail: string }>("/auth/password", {
+      method: "PUT",
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    });
+  },
+
   // --- Projects ---
   async getProjects() {
     return request<Array<{

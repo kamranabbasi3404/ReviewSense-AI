@@ -11,7 +11,7 @@ import bcrypt
 
 from database.database import get_db
 from models.db_models import User
-from models.schemas import UserSignup, UserLogin, Token, UserOut, TokenData
+from models.schemas import UserSignup, UserLogin, Token, UserOut, TokenData, UserProfileUpdate, UserPasswordUpdate
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -304,3 +304,45 @@ def logout(request: Request, response: Response):
 @router.get("/me", response_model=UserOut)
 def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+@router.put("/profile", response_model=UserOut)
+def update_profile(
+    profile_data: UserProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if profile_data.name is not None:
+        current_user.name = profile_data.name
+    
+    if profile_data.email is not None:
+        # Check if email is already taken by another user
+        if profile_data.email != current_user.email:
+            existing = db.query(User).filter(User.email == profile_data.email).first()
+            if existing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email address already registered by another user."
+                )
+            current_user.email = profile_data.email
+            
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+@router.put("/password")
+def update_password(
+    password_data: UserPasswordUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Verify current password
+    if not verify_password(password_data.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect current password"
+        )
+    
+    # Hash new password and save
+    current_user.password_hash = get_password_hash(password_data.new_password)
+    db.commit()
+    return {"detail": "Password successfully updated."}

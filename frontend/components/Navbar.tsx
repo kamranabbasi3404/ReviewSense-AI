@@ -110,6 +110,13 @@ export default function Navbar() {
 
               {/* Profile Menu */}
               <div className="flex items-center gap-3 border-l border-slate-200 pl-4 dark:border-slate-800">
+                <Link
+                  href="/settings"
+                  className="flex items-center justify-center rounded-lg p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white"
+                  title="Profile Settings"
+                >
+                  <User className="h-4.5 w-4.5" />
+                </Link>
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-violet-100 text-sm font-semibold text-indigo-700 dark:from-indigo-950 dark:to-violet-950 dark:text-indigo-300">
                   {getInitials(user.name)}
                 </div>
