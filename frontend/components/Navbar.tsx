@@ -10,6 +10,7 @@ interface UserProfile {
   id: number;
   name: string;
   email: string;
+  is_2fa_enabled?: boolean;
 }
 
 export default function Navbar() {

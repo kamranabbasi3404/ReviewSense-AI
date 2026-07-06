@@ -67,7 +67,7 @@ export default function SettingsPage() {
       .then((user) => {
         setName(user.name);
         setEmail(user.email);
-        setIs2faEnabled(user.is_2fa_enabled);
+        setIs2faEnabled((user as any).is_2fa_enabled);
       })
       .catch((err) => {
         console.error("Failed to load user info", err);

@@ -211,11 +211,11 @@ export const apiService = {
   },
 
   async getMe() {
-    return request<{ id: number; name: string; email: string }>("/auth/me");
+    return request<{ id: number; name: string; email: string; is_2fa_enabled: boolean }>("/auth/me");
   },
 
   async updateProfile(name: string, email: string) {
-    return request<{ id: number; name: string; email: string }>("/auth/profile", {
+    return request<{ id: number; name: string; email: string; is_2fa_enabled: boolean }>("/auth/profile", {
       method: "PUT",
       body: JSON.stringify({ name, email }),
     });
